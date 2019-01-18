@@ -22,18 +22,25 @@ class Screener:
         self.metrics = collections.defaultdict(lambda: 0)
         self.companies = collections.defaultdict(dict)
 
+    def fetch_data_from_url(self, url):
+        r = requests.get(url)
+        if r.status_code != 200:
+            self.metrics['FailedRequests'] += 1
+            raise
+        text = r.content.decode('utf-8-sig')  # Byte order mark being returned
+        self.file_cache[url] = text
+        return text
+
     def fetch_data(self, url):
         if url in self.file_cache:
             self.metrics['CacheHit'] += 1
             text = self.file_cache[url]
+            if not text:
+                self.metrics['CorruptedCache'] += 1
+                text = self.fetch_data_from_url(url)
         else:
             self.metrics['CacheMiss'] += 1
-            r = requests.get(url)
-            if r.status_code != 200:
-                self.metrics['FailedRequests'] += 1
-                raise
-            text = r.content.decode('utf-8-sig')  # Byte order mark being returned
-            self.file_cache[url] = text
+            text = self.fetch_data_from_url(url)
         return csv.reader(io.StringIO(text))
 
     def convert_to_table(self):
