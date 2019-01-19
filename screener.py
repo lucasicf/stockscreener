@@ -68,10 +68,13 @@ class Screener:
             else:
                 raise Exception('Sector could not be found from %s' % url)
 
-    def convert_to_table(self, companies):
+    def convert_to_table(self, companies, fields):
         table = []
-        table.append(['Symbol', 'Name', 'Sector', 'OM', 'FCFM', 'ROA', 'ROE', 'PScore',
-                      'CR', 'D/E', 'Revenue', 'YEG', 'YRG', 'EPS', 'BPS', 'DPS'])
+        if fields:
+            table.append(fields)
+        else:
+            table.append(['Symbol', 'Name', 'Sector', 'OM', 'FCFM', 'ROA', 'ROE', 'PScore',
+                          'CR', 'D/E', 'Revenue', 'YEG', 'YRG', 'EPS', 'BPS', 'DPS'])
         for (company, data) in companies.items():
             row = []
             row.append(company)
@@ -100,17 +103,20 @@ class Screener:
             table.append(row)
         return table
 
-    def pretty_print_table(self, companies):
+    def pretty_print_table(self, companies, market):
         table = PrettyTable()
-        data = self.convert_to_table(companies)
+        fields = market.get('i18n_fields', None)
+        data = self.convert_to_table(companies, fields)
         table.field_names = data[0]
         for row in data[1:]:
             table.add_row(row)
         print(table)
 
-    def save_to_csv(self, companies, output_filename):
-        data = self.convert_to_table(companies)
-        with open(output_filename, 'w', newline='\n') as output_file:
+    def save_to_csv(self, companies, market):
+        output_filename = market['output_file']
+        fields = market.get('i18n_fields', None)
+        data = self.convert_to_table(companies, fields)
+        with open(output_filename, 'w', newline='\n', encoding='utf-8') as output_file:
             csv.writer(output_file, lineterminator='\n').writerows(data)
 
     def import_data_morningstar(self, ticker, market):
@@ -140,6 +146,8 @@ class Screener:
                 data['dividends_per_share'] = ttm_data
             elif header.startswith('Book Value Per Share * '):
                 data['book_value_per_share'] = ttm_data
+            elif header.startswith('Net Income ') and header.endswith(' Mil'):
+                data['net_income'] = ttm_data * 1000000
             elif header.startswith('Revenue ') and header.endswith(' Mil'):
                 data['revenue'] = ttm_data * 1000000
             elif header == 'Return on Assets %':
@@ -163,7 +171,6 @@ class Screener:
 
         data['sector'] = self.fetch_sector_data(market['profile_url_template'](ticker))
 
-        print('Finished processing %s' % ticker)
         self.metrics['ProcessedCompanies'] += 1
         return data
 
@@ -179,7 +186,7 @@ class Screener:
                         self.metrics['FailedToProcessCompany'] += 1
                         print('Failed to process company %s' % ticker)
                         traceback.print_exc()
-                self.save_to_csv(companies, market['output_file'])
+                self.save_to_csv(companies, market)
         print('Metrics: %s' % dict(self.metrics))
 
 
