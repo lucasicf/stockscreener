@@ -20,7 +20,8 @@ def _parse_number(number):
 class Screener:
     def __init__(self, markets):
         assert all(
-            'output_file' in market and 'company_list' in market and 'url_template' in market
+            'output_file' in market and 'company_list' in market and
+            'url_template' in market and 'profile_url_template' in market
             for market in markets)
         self.markets = markets
         self.metrics = collections.defaultdict(lambda: 0)
@@ -74,7 +75,7 @@ class Screener:
             table.append(fields)
         else:
             table.append(['Symbol', 'Name', 'Sector', 'OM', 'FCFM', 'ROA', 'ROE', 'PScore',
-                          'CR', 'D/E', 'Revenue', 'YEG', 'YRG', 'EPS', 'BPS', 'DPS'])
+                          'CR', 'D/E', 'Revenue', 'Net Income', 'YEG', 'YRG', 'BPS', 'DPS'])
         for (company, data) in companies.items():
             row = []
             row.append(company)
@@ -91,13 +92,13 @@ class Screener:
             row.append(data.get('current_ratio', 0))
             row.append(data.get('debt_to_equity_ratio', 0))
             row.append(data.get('revenue', 0))
+            row.append(data.get('net_income', 0))
             row.append(min(
                 data.get('earnings_growth_3y', 0),
                 data.get('earnings_growth_5y', 0))),
             row.append(min(
                 data.get('revenue_growth_3y', 0),
                 data.get('revenue_growth_5y', 0))),
-            row.append(data.get('earnings_per_share', 0))
             row.append(data.get('book_value_per_share', 0))
             row.append(data.get('dividends_per_share', 0))
             table.append(row)
@@ -140,8 +141,6 @@ class Screener:
                 data['operating_margin'] = ttm_data / 100
             elif header == 'Free Cash Flow/Sales %':
                 data['free_cash_flow_margin'] = ttm_data / 100
-            elif header.startswith('Earnings Per Share '):
-                data['earnings_per_share'] = ttm_data
             elif header.startswith('Dividends '):
                 data['dividends_per_share'] = ttm_data
             elif header.startswith('Book Value Per Share * '):

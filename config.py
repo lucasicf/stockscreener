@@ -1070,6 +1070,6 @@ MARKETS = [
         ],
         'url_template': lambda ticker: 'http://financials.morningstar.com/ajax/exportKR2CSV.html?t=%s&country=BRA&region=BRA' % ticker,
         'profile_url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s.SA/profile' % ticker.replace('.', '-'),
-        'i18n_fields': ['Código', 'Nome', 'Setor', 'MO', 'MFCL', 'RA', 'RPL', 'NotaL', 'LC', 'D/PL', 'Receita', 'CLA', 'CRA', 'LPA', 'VPA', 'DPA']
+        'i18n_fields': ['Código', 'Nome', 'Setor', 'MO', 'MFCL', 'RA', 'RPL', 'NotaL', 'LC', 'D/PL', 'Receita', 'Lucro líquido', 'CLA', 'CRA', 'VPA', 'DPA']
     }
 ]
