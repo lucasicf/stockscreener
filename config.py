@@ -155,7 +155,6 @@ MARKETS = [
             'MEG',
             'MX',
             'MRU',
-            'MNW',
             'MSI',
             'MTY',
             'MTL',
@@ -250,7 +249,11 @@ MARKETS = [
             'YRI'
         ],
         'url_template': lambda ticker: 'http://financials.morningstar.com/ajax/exportKR2CSV.html?t=%s&culture=en-CA&region=CAN' % ticker,
-        'profile_url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s.TO/profile' % ticker.replace('.', '-')
+        'profile_url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s.TO/profile' % ticker.replace('.', '-'),
+        'share_count': {
+            'url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s.TO/key-statistics' % ticker.replace('.', '-'),
+            'selector': '#Col1-3-KeyStatistics-Proxy > section > div.Mstart\\28 a\\29.Mend\\28 a\\29 > div.Fl\\28 end\\29.W\\28 50\\25 \\29.smartphone_W\\28 100\\25 \\29 > div > div:nth-child(2) > table > tbody > tr:nth-child(3) > td:nth-child(2)'
+        }
     },
     {
         'output_file': 'usa.csv',
@@ -762,7 +765,11 @@ MARKETS = [
             'ZTS',
         ],
         'url_template': lambda ticker: 'http://financials.morningstar.com/ajax/exportKR2CSV.html?t=%s' % ticker,
-        'profile_url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s/profile' % ticker.replace('.', '-')
+        'profile_url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s/profile' % ticker.replace('.', '-'),
+        'share_count': {
+            'url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s/key-statistics' % ticker.replace('.', '-'),
+            'selector': '#Col1-3-KeyStatistics-Proxy > section > div.Mstart\\28 a\\29.Mend\\28 a\\29 > div.Fl\\28 end\\29.W\\28 50\\25 \\29.smartphone_W\\28 100\\25 \\29 > div > div:nth-child(2) > table > tbody > tr:nth-child(3) > td:nth-child(2)'
+        }
     },
     {
         'output_file': 'brasil.csv',
@@ -889,7 +896,7 @@ MARKETS = [
             'CRFB3',
             'CEDO3',
             'CLSC3',
-            'CELP3',
+            'CELP5',
             'RANI3',
             'CMIG3',
             'HGTX3',
@@ -982,7 +989,7 @@ MARKETS = [
             'MTIG4',
             'LEVE3',
             'FRIO3',
-            'MTSA3',
+            'MTSA4',
             'MILS3',
             'BEEF3',
             'MNPR3',
@@ -1015,7 +1022,7 @@ MARKETS = [
             'QGEP3',
             'RDNI3',
             'RAPT3',
-            'RCSL3',
+            'RCSL4',
             'REDE3',
             'RNEW3',
             'RSUL4',
@@ -1070,6 +1077,10 @@ MARKETS = [
         ],
         'url_template': lambda ticker: 'http://financials.morningstar.com/ajax/exportKR2CSV.html?t=%s&country=BRA&region=BRA' % ticker,
         'profile_url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s.SA/profile' % ticker.replace('.', '-'),
-        'i18n_fields': ['Código', 'Nome', 'Setor', 'MO', 'MFCL', 'RA', 'RPL', 'NotaL', 'LC', 'D/PL', 'Receita', 'Lucro líquido', 'CLA', 'CRA', 'VPA', 'DPA']
+        'i18n_fields': ['Código', 'Nome', 'Setor', 'MO', 'MFCL', 'RA', 'RPL', 'NotaL', 'LC', 'D/PL', 'Receita', 'CLA', 'CRA', 'LPA', 'RPA', 'VPA', 'DPA'],
+        'share_count': {
+            'url_template': lambda ticker: 'http://www.fundamentus.com.br/detalhes.php?papel=%s' % ticker,
+            'selector': 'body > div.center > div.conteudo.clearfix > table:nth-child(3) > tr:nth-child(2) > td:nth-child(4) > span'
+        }
     }
 ]
