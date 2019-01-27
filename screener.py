@@ -4,6 +4,7 @@ import csv
 import io
 import requests
 import shelve
+import time
 import traceback
 from bs4 import BeautifulSoup
 from prettytable import PrettyTable
@@ -24,6 +25,31 @@ def _parse_number(number):
         return float(number.replace(',', ''))
 
 
+class PersistentCache:
+    def __enter__(self):
+        self.cache_file = shelve.open('screener_cache')
+        print('__enter__')
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.cache_file.close()
+        print('__exit__')
+
+    def __contains__(self, key):
+        timestamp_now = time.time()
+        return key in self.cache_file and self.cache_file[key]['expiry'] > timestamp_now
+
+    def save(self, key, value, ttl_seconds):
+        timestamp_now = time.time()
+        self.cache_file[key] = {'content': value, 'expiry': timestamp_now + ttl_seconds}
+
+    def get(self, key):
+        if key in self:
+            return self.cache_file[key]['content']
+        else:
+            return ValueError('Key %s is not in cache or is expired' % key)
+
+
 class Screener:
     def __init__(self, markets):
         assert all(
@@ -35,7 +61,7 @@ class Screener:
         self.markets = markets
         self.metrics = collections.defaultdict(lambda: 0)
 
-    def fetch_data_from_url(self, url, cache=True):
+    def fetch_data_from_url(self, url, cache_ttl=None):
         print('Fetching URL: %s ...' % url)
         headers = {}
         if 'fundamentus' in url:  # Somehow this works to prevent receiving a bad HTTP 302
@@ -52,28 +78,29 @@ class Screener:
             self.metrics['EmptyRequests'] += 1
             raise Exception('Empty response from server. Skipping %s' % url )
         print('Finished fetching URL: %s' % url)
-        if cache:
-            self.file_cache[url] = text
-            print('Saved URL into the cache file: %s' % url)
+        if cache_ttl:
+            self.cache.save(url, text, cache_ttl)
+            print('Saved URL into the cache: %s' % url)
         self.metrics['SuccessfulRequests'] += 1
         return text
 
-    def fetch_data(self, url):
-        if url in self.file_cache:
+    def fetch_financial_data(self, url):
+        if url in self.cache:
             self.metrics['CacheHit'] += 1
-            return self.file_cache[url]
+            return self.cache.get(url)
         else:
             self.metrics['CacheMiss'] += 1
-            return self.fetch_data_from_url(url)
+            cache_ttl = random.randint(15, 30) * 86400  # 15-30 days in seconds
+            return self.fetch_data_from_url(url, cache_ttl=cache_ttl)
 
     def fetch_sector_data(self, url):
         cache_key = 'sector__%s' % url
-        if cache_key in self.file_cache:
+        if cache_key in self.cache:
             self.metrics['CacheHit'] += 1
-            return self.file_cache[cache_key]
+            return self.cache.get(cache_key)
         else:
             self.metrics['CacheMiss'] += 1
-            raw_text = self.fetch_data_from_url(url, cache=False)
+            raw_text = self.fetch_data_from_url(url)
             soup = BeautifulSoup(raw_text, 'lxml')
             sector = soup.select(
                 '#Col1-3-Profile-Proxy > section > div.asset-profile-container > div > div > '
@@ -83,7 +110,8 @@ class Screener:
                     '#Col1-0-Profile-Proxy > section > div.asset-profile-container > div > div > '
                     'p.D\\28 ib\\29.Va\\28 t\\29 > strong:nth-child(2)')
             if sector and sector[0]:
-                self.file_cache[cache_key] = sector[0].text
+                sector_ttl = random.randint(150, 300) * 86400  # 150-300 days in seconds
+                self.cache.save(cache_key, sector[0].text, sector_ttl)
                 return sector
             else:
                 raise Exception('Sector could not be found from %s' % url)
@@ -91,19 +119,20 @@ class Screener:
     def fetch_share_count_data(self, share_count_source, ticker):
         url = share_count_source['url_template'](ticker)
         cache_key = 'share_count__%s' % url
-        if cache_key in self.file_cache:
+        if cache_key in self.cache:
             self.metrics['CacheHit'] += 1
-            return self.file_cache[cache_key]
+            return self.cache.get(cache_key)
         else:
             self.metrics['CacheMiss'] += 1
-            raw_text = self.fetch_data_from_url(url, cache=False)
+            raw_text = self.fetch_data_from_url(url)
             soup = BeautifulSoup(raw_text, 'lxml')
             share_count_text = soup.select(share_count_source['selector'])
             if share_count_text and share_count_text[0]:
                 share_count = _parse_number(share_count_text[0].text)
                 if share_count == 0:
                     raise Exception('Share count was invalid found from %s' % url)
-                self.file_cache[cache_key] = share_count
+                cache_ttl = random.randint(15, 30) * 86400  # 15-30 days in seconds
+                self.cache.save(cache_key, share_count, cache_ttl)
                 return share_count
             else:
                 raise Exception('Share count could not be found from %s' % url)
@@ -163,7 +192,7 @@ class Screener:
             csv.writer(output_file, lineterminator='\n').writerows(data)
 
     def import_data_morningstar(self, ticker, market):
-        raw_data = self.fetch_data(market['url_template'](ticker))
+        raw_data = self.fetch_financial_data(market['url_template'](ticker))
         raw_data_table = csv.reader(io.StringIO(raw_data))
         data = {}
         current_state = ''
@@ -217,8 +246,8 @@ class Screener:
         return data
 
     def import_data(self):
-        with shelve.open('screener_cache') as file_cache:
-            self.file_cache = file_cache
+        with PersistentCache() as cache:
+            self.cache = cache
             for market in self.markets:
                 companies = {}
                 for ticker in market['company_list']:
