@@ -2,6 +2,8 @@
 import collections
 import csv
 import io
+import random
+import re
 import requests
 import shelve
 import time
@@ -28,12 +30,10 @@ def _parse_number(number):
 class PersistentCache:
     def __enter__(self):
         self.cache_file = shelve.open('screener_cache')
-        print('__enter__')
         return self
 
     def __exit__(self, type, value, traceback):
         self.cache_file.close()
-        print('__exit__')
 
     def __contains__(self, key):
         timestamp_now = time.time()
@@ -53,7 +53,7 @@ class PersistentCache:
 class Screener:
     def __init__(self, markets):
         assert all(
-            'output_file' in market and 'company_list' in market and
+            'output_file' in market and 'currency' in market and 'company_list' in market and
             'url_template' in market and 'profile_url_template' in market and
             'share_count' in market and 'url_template' in market['share_count'] and
             'selector' in market['share_count']
@@ -166,12 +166,12 @@ class Screener:
             row.append(min(
                 data.get('revenue_growth_3y', 0),
                 data.get('revenue_growth_5y', 0))),
-            earnings_per_share = data.get('net_income', 0) / data.get('share_count')
-            revenue_per_share = data.get('revenue', 0) / data.get('share_count')
+            earnings_per_share = data.get('net_income', (0,))[0] / data.get('share_count')
+            revenue_per_share = data.get('revenue', (0,))[0] / data.get('share_count')
             row.append(earnings_per_share)
             row.append(revenue_per_share)
-            row.append(data.get('book_value_per_share', 0))
-            row.append(data.get('dividends_per_share', 0))
+            row.append(data.get('book_value_per_share', (0,))[0])
+            row.append(data.get('dividends_per_share', (0,))[0])
             table.append(row)
         return table
 
@@ -208,18 +208,23 @@ class Screener:
                     current_state = header
                 continue
             ttm_data = lambda: _parse_number(row[-1])
+            dividends_re = re.match('^Dividends ([A-Z]{3})$', header)
+            book_value_per_share_re = re.match('^Book Value Per Share \* ([A-Z]{3})$', header)
+            net_income_re = re.match('^Net Income ([A-Z]{3}) Mil$', header)
+            revenue_re = re.match('^Revenue ([A-Z]{3}) Mil$', header)
+
             if header == 'Operating Margin':
                 data['operating_margin'] = ttm_data() / 100
             elif header == 'Free Cash Flow/Sales %':
                 data['free_cash_flow_margin'] = ttm_data() / 100
-            elif header.startswith('Dividends '):
-                data['dividends_per_share'] = ttm_data()
-            elif header.startswith('Book Value Per Share * '):
-                data['book_value_per_share'] = ttm_data()
-            elif header.startswith('Net Income ') and header.endswith(' Mil'):
-                data['net_income'] = ttm_data() * 1000000
-            elif header.startswith('Revenue ') and header.endswith(' Mil'):
-                data['revenue'] = ttm_data() * 1000000
+            elif dividends_re:
+                data['dividends_per_share'] = (ttm_data(), dividends_re.group(1))
+            elif book_value_per_share_re:
+                data['book_value_per_share'] = (ttm_data(), book_value_per_share_re.group(1))
+            elif net_income_re:
+                data['net_income'] = (ttm_data() * 1000000, net_income_re.group(1))
+            elif revenue_re:
+                data['revenue'] = (ttm_data() * 1000000, revenue_re.group(1))
             elif header == 'Return on Assets %':
                 data['return_on_assets'] = ttm_data() / 100
             elif header == 'Return on Equity %':
