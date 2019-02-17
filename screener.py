@@ -159,7 +159,7 @@ class Screener:
                        data.get('return_on_equity', 0))
             row.append(data.get('current_ratio', 0))
             row.append(data.get('debt_to_equity_ratio', 0))
-            row.append(data.get('revenue', 0))
+            row.append(data.get('revenue', (0,))[0])
             row.append(min(
                 data.get('earnings_growth_3y', 0),
                 data.get('earnings_growth_5y', 0))),
