@@ -155,10 +155,10 @@ class Screener:
             row.append(data.get('free_cash_flow_margin', 0))
             row.append(data.get('return_on_assets', 0))
             row.append(data.get('return_on_equity', 0))
-            row.append(1000 * data.get('operating_margin', 0) *
-                       data.get('free_cash_flow_margin', 0) *
-                       data.get('return_on_assets', 0) *
-                       data.get('return_on_equity', 0))
+            row.append(1000 * max(0, data.get('operating_margin', 0)) *
+                       max(0, data.get('free_cash_flow_margin', 0)) *
+                       max(0, data.get('return_on_assets', 0))*
+                       max(0, data.get('return_on_equity', 0)))
             row.append(data.get('current_ratio', 0))
             row.append(data.get('debt_to_equity_ratio', 0))
             row.append(data.get('revenue', (0,))[0])
