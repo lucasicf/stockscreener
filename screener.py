@@ -66,6 +66,8 @@ class Screener:
         headers = {}
         if 'fundamentus' in url:  # Somehow this works to prevent receiving a bad HTTP 302
             headers['Cookie'] = 'PHPSESSID'
+        if 'morningstar' in url:  # Somehow this works to prevent receiving a bad HTTP 302
+            headers['Referer'] = 'http://financials.morningstar.com/'
         r = requests.get(url, headers=headers)
         if r.status_code != 200:
             self.metrics['FailedRequests'] += 1
