@@ -139,6 +139,14 @@ class Screener:
             else:
                 raise Exception('Share count could not be found from %s' % url)
 
+    def calc_pscore(self, data, entries):
+        pscore = 0.0
+        for entry in entries:
+            value = data.get(entry, 0)
+            if value > 0:
+                pscore += 1 + (1/len(entries)) * value
+        return pscore
+
     def convert_to_table(self, companies, fields):
         table = []
         if fields:
@@ -155,10 +163,8 @@ class Screener:
             row.append(data.get('free_cash_flow_margin', 0))
             row.append(data.get('return_on_assets', 0))
             row.append(data.get('return_on_equity', 0))
-            row.append(1000 * max(0, data.get('operating_margin', 0)) *
-                       max(0, data.get('free_cash_flow_margin', 0)) *
-                       max(0, data.get('return_on_assets', 0))*
-                       max(0, data.get('return_on_equity', 0)))
+            row.append(self.calc_pscore(data, ['operating_margin', 'free_cash_flow_margin',
+                                               'return_on_assets', 'return_on_equity']))
             row.append(data.get('current_ratio', 0))
             row.append(data.get('debt_to_equity_ratio', 0))
             row.append(data.get('revenue', (0,))[0])
