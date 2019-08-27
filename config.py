@@ -35,6 +35,10 @@ MARKETS = [
             {
                 'url_template': lambda ticker: 'https://finance.yahoo.com/quote/%s.TO/key-statistics' % ticker.replace('.', '-'),
                 'selector': '#Col1-3-KeyStatistics-Proxy > section > div.Mstart\\28 a\\29.Mend\\28 a\\29 > div.Fl\\28 end\\29.W\\28 50\\25 \\29.smartphone_W\\28 100\\25 \\29 > div > div:nth-child(2) table > tbody > tr:nth-child(3) > td:nth-child(2)'
+            },
+            {
+                'url_template': lambda ticker: 'https://web.tmxmoney.com/quote.php?qm_symbol=%s' % ticker,
+                'selector': '#contentWrapper > div > div > div > div.tmx-panel.detailed-quote > div.tmx-panel-body > div > div:nth-child(4) > div > strong'
             }
         ]
     }
