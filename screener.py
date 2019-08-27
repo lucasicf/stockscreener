@@ -54,8 +54,9 @@ class Screener:
         assert all(
             'output_file' in market and 'currency' in market and 'company_list' in market and
             'url_template' in market and 'profile_url_template' in market and
-            'share_count' in market and 'url_template' in market['share_count'] and
-            'selector' in market['share_count']
+            'share_count' in market and
+            all('url_template' in source for source in market['share_count']) and
+            all('selector' in source for source in market['share_count'])
             for market in markets)
         self.markets = markets
         self.metrics = collections.defaultdict(lambda: 0)
@@ -109,33 +110,38 @@ class Screener:
             if not sector or not sector[0]:
                 sector = soup.select(
                     '#Col1-0-Profile-Proxy > section > div.asset-profile-container > div > div > '
-                    'p.D\\28 ib\\29.Va\\28 t\\29 > strong:nth-child(2)')
+                    'p.D\\28 ib\\29.Va\\28 t\\29 > span:nth-child(2)')
             if not sector or not sector[0]:
                 raise Exception('Sector could not be found from %s' % url)
             sector_ttl = random.randint(150, 300) * 86400  # 150-300 days in seconds
             self.cache.save(cache_key, sector[0].text, sector_ttl)
             return sector
 
-    def fetch_share_count_data(self, share_count_source, ticker):
-        url = share_count_source['url_template'](ticker)
-        cache_key = 'share_count__%s' % url
+    def fetch_share_count_data(self, share_count_sources, ticker, market_file):
+        cache_key = 'share_count__%s:%s' % (ticker, market_file)
         if cache_key in self.cache:
             self.metrics['CacheHit'] += 1
             return self.cache.get(cache_key)
-        else:
+
+        for share_count_source in share_count_sources:
+            url = share_count_source['url_template'](ticker)
             self.metrics['CacheMiss'] += 1
             raw_text = self.fetch_data_from_url(url)
             soup = BeautifulSoup(raw_text, 'lxml')
             share_count_text = soup.select(share_count_source['selector'])
             if not share_count_text or not share_count_text[0] or share_count_text[0].text == 'N/A':
-                raise Exception('Share count could not be found from %s' % url)
+                print('Share count could not be found from %s' % url)
+                continue
 
             share_count = _parse_number(share_count_text[0].text)
             if share_count == 0:
-                raise Exception('Share count was invalid found from %s' % url)
+                print('Share count could not be found from %s' % url)
+                continue
             cache_ttl = random.randint(15, 30) * 86400  # 15-30 days in seconds
             self.cache.save(cache_key, share_count, cache_ttl)
             return share_count
+
+        raise Exception('Share count for %s could not be found from any source' % ticker)
 
     def calc_pscore(self, data, entries):
         pscore = 0.0
@@ -251,7 +257,7 @@ class Screener:
                     data['earnings_growth_3y'] = _parse_number(row[-2]) / 100
 
         data['sector'] = self.fetch_sector_data(market['profile_url_template'](ticker))
-        data['share_count'] = self.fetch_share_count_data(market['share_count'], ticker)
+        data['share_count'] = self.fetch_share_count_data(market['share_count'], ticker, market['output_file'])
 
         self.metrics['ProcessedCompanies'] += 1
         return data
