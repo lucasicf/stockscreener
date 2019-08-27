@@ -4,7 +4,7 @@ MARKETS = [
         'currency': 'CAD',
         'company_list': [
             'AAV', 'ARE', 'AEM', 'AC', 'ASR', 'AGI', 'AD', 'AQN', 'ATD.B', 'AP.UN',
-            'ALA', 'AIF', 'APH', 'ARX', 'AX.UN', 'ACO.X', 'ATA', 'ACB', 'BTO', 'BAD',
+            'ALA', 'AIF', 'APHA', 'ARX', 'AX.UN', 'ACO.X', 'ATA', 'ACB', 'BTO', 'BAD',
             'BMO', 'BNS', 'ABX', 'BHC', 'BTE', 'BCE', 'BIR', 'BB', 'BEI.UN', 'BBD.B',
             'BLX', 'BYD.UN', 'BAM.A', 'BBU.UN', 'BIP.UN', 'BPY.UN', 'BEP.UN', 'DOO', 'CAE', 'CCO',
             'GOOS', 'CAR.UN', 'CM', 'CNR', 'CNQ', 'CP', 'CTC.A', 'CU', 'CWB', 'CFP',
