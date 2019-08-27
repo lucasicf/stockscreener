@@ -44,10 +44,9 @@ class PersistentCache:
         self.cache_file[key] = {'content': value, 'expiry': timestamp_now + ttl_seconds}
 
     def get(self, key):
-        if key in self:
-            return self.cache_file[key]['content']
-        else:
+        if key not in self:
             return ValueError('Key %s is not in cache or is expired' % key)
+        return self.cache_file[key]['content']
 
 
 class Screener:
@@ -106,17 +105,16 @@ class Screener:
             soup = BeautifulSoup(raw_text, 'lxml')
             sector = soup.select(
                 '#Col1-3-Profile-Proxy > section > div.asset-profile-container > div > div > '
-                'p.D\\28 ib\\29.Va\\28 t\\29 > strong:nth-child(2)')
+                'p.D\\28 ib\\29.Va\\28 t\\29 > span:nth-child(2)')
             if not sector or not sector[0]:
                 sector = soup.select(
                     '#Col1-0-Profile-Proxy > section > div.asset-profile-container > div > div > '
                     'p.D\\28 ib\\29.Va\\28 t\\29 > strong:nth-child(2)')
-            if sector and sector[0]:
-                sector_ttl = random.randint(150, 300) * 86400  # 150-300 days in seconds
-                self.cache.save(cache_key, sector[0].text, sector_ttl)
-                return sector
-            else:
+            if not sector or not sector[0]:
                 raise Exception('Sector could not be found from %s' % url)
+            sector_ttl = random.randint(150, 300) * 86400  # 150-300 days in seconds
+            self.cache.save(cache_key, sector[0].text, sector_ttl)
+            return sector
 
     def fetch_share_count_data(self, share_count_source, ticker):
         url = share_count_source['url_template'](ticker)
@@ -129,15 +127,15 @@ class Screener:
             raw_text = self.fetch_data_from_url(url)
             soup = BeautifulSoup(raw_text, 'lxml')
             share_count_text = soup.select(share_count_source['selector'])
-            if share_count_text and share_count_text[0]:
-                share_count = _parse_number(share_count_text[0].text)
-                if share_count == 0:
-                    raise Exception('Share count was invalid found from %s' % url)
-                cache_ttl = random.randint(15, 30) * 86400  # 15-30 days in seconds
-                self.cache.save(cache_key, share_count, cache_ttl)
-                return share_count
-            else:
+            if not share_count_text or not share_count_text[0] or share_count_text[0].text == 'N/A':
                 raise Exception('Share count could not be found from %s' % url)
+
+            share_count = _parse_number(share_count_text[0].text)
+            if share_count == 0:
+                raise Exception('Share count was invalid found from %s' % url)
+            cache_ttl = random.randint(15, 30) * 86400  # 15-30 days in seconds
+            self.cache.save(cache_key, share_count, cache_ttl)
+            return share_count
 
     def calc_pscore(self, data, entries):
         pscore = 0.0
